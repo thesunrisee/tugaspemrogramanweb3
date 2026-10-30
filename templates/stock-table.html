@@ -1,0 +1,202 @@
+<!-- Template <ba-stock-table> (id: tpl-stock). Root: <div class="stock-panel"> -->
+<div class="stock-panel">
+
+  <!-- ===================== PANEL FILTER & SORT ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Filter &amp; Urutkan</h2>
+      <button type="button" class="btn" @click="resetFilters">Reset</button>
+    </div>
+
+    <div class="filter-grid">
+      <!-- v-model = two-way binding: perubahan select langsung mengubah filterUpbjj, dan sebaliknya -->
+      <label class="field">
+        <span>UT-Daerah</span>
+        <select v-model="filterUpbjj">
+          <option value="">Semua UT-Daerah</option>
+          <!-- v-for + :key; :value = one-way binding ke atribut value -->
+          <option v-for="u in upbjjList" :key="u" :value="u">{{ u }}</option>
+        </select>
+      </label>
+
+      <!-- DEPENDENT OPTIONS: filter Kategori baru muncul setelah UT-Daerah dipilih -->
+      <label class="field" v-if="filterUpbjj">
+        <span>Kategori Mata Kuliah</span>
+        <select v-model="filterKategori">
+          <option value="">Semua kategori</option>
+          <option v-for="k in kategoriOptions" :key="k" :value="k">{{ k }}</option>
+        </select>
+        <small class="hint" v-if="kategoriOptions.length === 0">Belum ada stok di UT-Daerah ini.</small>
+      </label>
+      <p class="hint field-note" v-else>Pilih UT-Daerah untuk menampilkan filter kategori.</p>
+
+      <label class="field">
+        <span>Urutkan berdasarkan</span>
+        <select v-model="sortKey">
+          <option value="">(tanpa pengurutan)</option>
+          <option value="judul">Judul</option>
+          <option value="qty">Jumlah stok</option>
+          <option value="harga">Harga</option>
+        </select>
+      </label>
+
+      <!-- Arah urutan hanya relevan jika sudah memilih kolom pengurutan -->
+      <div class="field" v-show="sortKey">
+        <span>Arah</span>
+        <div class="radio-row">
+          <label><input type="radio" value="asc" v-model="sortDir"> Naik</label>
+          <label><input type="radio" value="desc" v-model="sortDir"> Turun</label>
+        </div>
+      </div>
+
+      <label class="check">
+        <input type="checkbox" v-model="onlyReorder">
+        <span>Hanya yang perlu re-order <small>(stok &lt; safety atau kosong)</small></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- ===================== FORMULIR TAMBAH / UBAH ===================== -->
+  <!-- Enter menyimpan, Esc menutup. keydown dari semua input naik (bubble) ke div ini. -->
+  <section class="card form-card" v-if="formVisible" @keydown.enter="onFormEnter" @keydown.esc="closeForm">
+    <h2>{{ isEditing ? 'Ubah Data Bahan Ajar' : 'Tambah Bahan Ajar Baru' }}</h2>
+
+    <div class="form-grid">
+      <label class="field">
+        <span>Kode MK</span>
+        <input type="text" ref="firstField" v-model="form.kode" placeholder="EKMA4116" :class="{ invalid: errors.kode }">
+        <small class="error" v-if="errors.kode">{{ errors.kode }}</small>
+      </label>
+
+      <label class="field span-2">
+        <span>Judul / Nama Mata Kuliah</span>
+        <input type="text" v-model="form.judul" placeholder="Pengantar Manajemen" :class="{ invalid: errors.judul }">
+        <small class="error" v-if="errors.judul">{{ errors.judul }}</small>
+      </label>
+
+      <label class="field">
+        <span>Kategori</span>
+        <select v-model="form.kategori" :class="{ invalid: errors.kategori }">
+          <option value="" disabled>Pilih kategori</option>
+          <option v-for="k in kategoriList" :key="k" :value="k">{{ k }}</option>
+        </select>
+        <small class="error" v-if="errors.kategori">{{ errors.kategori }}</small>
+      </label>
+
+      <label class="field">
+        <span>UT-Daerah</span>
+        <select v-model="form.upbjj" :class="{ invalid: errors.upbjj }">
+          <option value="" disabled>Pilih UT-Daerah</option>
+          <option v-for="u in upbjjList" :key="u" :value="u">{{ u }}</option>
+        </select>
+        <small class="error" v-if="errors.upbjj">{{ errors.upbjj }}</small>
+      </label>
+
+      <label class="field">
+        <span>Lokasi Rak</span>
+        <input type="text" v-model="form.lokasiRak" placeholder="R1-A3" :class="{ invalid: errors.lokasiRak }">
+        <small class="error" v-if="errors.lokasiRak">{{ errors.lokasiRak }}</small>
+      </label>
+
+      <label class="field">
+        <span>Harga (Rp)</span>
+        <input type="number" min="1" v-model="form.harga" placeholder="65000" :class="{ invalid: errors.harga }">
+        <small class="error" v-if="errors.harga">{{ errors.harga }}</small>
+      </label>
+
+      <label class="field">
+        <span>Jumlah Stok (buah)</span>
+        <input type="number" min="0" v-model="form.qty" placeholder="0" :class="{ invalid: errors.qty }">
+        <small class="error" v-if="errors.qty">{{ errors.qty }}</small>
+      </label>
+
+      <label class="field">
+        <span>Safety Stock (buah)</span>
+        <input type="number" min="0" v-model="form.safety" placeholder="0" :class="{ invalid: errors.safety }">
+        <small class="error" v-if="errors.safety">{{ errors.safety }}</small>
+      </label>
+
+      <label class="field span-3">
+        <span>Catatan <small>(boleh tag sederhana: &lt;b&gt; &lt;i&gt; &lt;em&gt; &lt;strong&gt; &lt;u&gt;)</small></span>
+        <input type="text" v-model="form.catatan" placeholder="Edisi 2024, cetak ulang">
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <span class="hint">Tekan <kbd>Enter</kbd> untuk menyimpan, <kbd>Esc</kbd> untuk batal.</span>
+      <button type="button" class="btn" @click="closeForm">Batal</button>
+      <button type="button" class="btn btn-primary" @click="submit">{{ isEditing ? 'Simpan Perubahan' : 'Tambah Data' }}</button>
+    </div>
+  </section>
+
+  <!-- ===================== DAFTAR STOK ===================== -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Daftar Stok Bahan Ajar</h2>
+      <button type="button" class="btn btn-primary" @click="openCreate">+ Tambah Bahan Ajar</button>
+    </div>
+
+    <!-- Ringkasan jumlah per status. v-for pada OBJEK: (nilai, nama-kunci) in objek -->
+    <div class="summary-row">
+      <span class="muted">Menampilkan {{ visibleItems.length }} dari {{ items.length }} data</span>
+      <span v-for="(count, label) in statusSummary" :key="label">
+        <status-badge :status="label" :label="label + ': ' + count"></status-badge>
+      </span>
+    </div>
+
+    <!-- v-if / v-else: tabel jika ada data, pesan kosong jika tidak ada -->
+    <div class="table-wrap" v-if="visibleItems.length > 0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Kode / Nama Mata Kuliah</th>
+            <th>Kategori</th>
+            <th>UT-Daerah</th>
+            <th>Lokasi Rak</th>
+            <th class="num">Harga</th>
+            <th class="num">Stok</th>
+            <th class="num">Safety</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- v-for dengan index (berbasis angka, mulai dari 0) -->
+          <tr v-for="(item, index) in visibleItems" :key="itemKey(item)">
+            <td>{{ index + 1 }}</td>
+            <td>
+              <strong>{{ item.kode }}</strong><br>
+              <span class="muted">{{ item.judul }}</span>
+            </td>
+            <td>{{ item.kategori }}</td>
+            <td>{{ item.upbjj }}</td>
+            <td>{{ item.lokasiRak }}</td>
+            <!-- Filter teks: rupiah => "Rp 65.000", buah => "28 buah" -->
+            <td class="num">{{ item.harga | rupiah }}</td>
+            <td class="num">{{ item.qty | buah }}</td>
+            <td class="num">{{ item.safety | buah }}</td>
+            <!-- Event mouse: hover di sel Status menampilkan catatan (HTML) sebagai tooltip -->
+            <td class="status-cell"
+                @mouseenter="showTip($event, item)"
+                @mousemove="moveTip($event)"
+                @mouseleave="hideTip">
+              <status-badge :status="statusOf(item)"></status-badge>
+              <span class="note-hint" title="Arahkan kursor untuk melihat catatan">&#9432;</span>
+            </td>
+            <td class="actions">
+              <button type="button" class="icon-btn" title="Ubah" @click="openEdit(item)">&#9998;</button>
+              <button type="button" class="icon-btn danger" title="Hapus" @click="requestDelete(item)">&#128465;</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="empty" v-else>Tidak ada data yang cocok dengan filter. Coba tekan <strong>Reset</strong>.</p>
+  </section>
+
+  <!-- Tooltip catatan. v-html merender tag HTML dari catatanHTML (sudah disanitasi saat simpan). -->
+  <div class="tooltip" v-if="tooltip.visible"
+       :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+       v-html="tooltip.html"></div>
+</div>

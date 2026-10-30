@@ -1,0 +1,12 @@
+<!-- Template <status-badge> (id: tpl-badge). Satu elemen root: <span class="badge"> -->
+<span class="badge" :class="badgeClass">
+  <!-- v-if / v-else-if / v-else: pilih SATU simbol sesuai status -->
+  <span v-if="status === 'Aman'" class="badge-icon" aria-hidden="true">&#10004;</span>
+  <span v-else-if="status === 'Menipis'" class="badge-icon" aria-hidden="true">&#9888;</span>
+  <span v-else-if="status === 'Kosong'" class="badge-icon" aria-hidden="true">&#10006;</span>
+  <span v-else-if="status === 'Terkirim'" class="badge-icon" aria-hidden="true">&#10004;</span>
+  <span v-else-if="status === 'Dalam Perjalanan'" class="badge-icon" aria-hidden="true">&#10148;</span>
+  <span v-else class="badge-icon" aria-hidden="true">&#9679;</span>
+  <!-- Mustache: tampilkan label jika ada, kalau tidak tampilkan status -->
+  <span>{{ label || status }}</span>
+</span>

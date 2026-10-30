@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SITTA - Pemesanan Bahan Ajar UT</title>
+  <!-- Gaya global aplikasi -->
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+  <!-- Pesan sementara selama template & data diunduh. Dihapus oleh app.js saat selesai. -->
+  <div id="boot-message" class="boot-message">Memuat aplikasi&hellip;</div>
+
+  <!--
+    ROOT Vue (mount point #app).
+    v-cloak: disembunyikan oleh CSS sampai Vue selesai memasang, agar tanda {{ }} tidak sempat terlihat.
+  -->
+  <div id="app" v-cloak>
+
+    <header class="app-header">
+      <h1>SITTA</h1>
+      <p>Sistem Informasi Tiras dan Transaksi Bahan Ajar &ndash; Universitas Terbuka</p>
+    </header>
+
+    <!-- Navigasi antar halaman: cukup mengubah variabel "tab" (tanpa vue-router) -->
+    <nav class="tabs">
+      <button type="button" :class="{ active: tab === 'stok' }" @click="tab = 'stok'">&#128230; Stok Bahan Ajar</button>
+      <button type="button" :class="{ active: tab === 'tracking' }" @click="tab = 'tracking'">&#128666; Tracking DO</button>
+      <button type="button" :class="{ active: tab === 'order' }" @click="tab = 'order'">&#128221; Pemesanan</button>
+    </nav>
+
+    <main class="container">
+      <!-- v-show: semua halaman tetap ada di DOM, hanya disembunyikan (state filter/pencarian tidak hilang saat pindah tab) -->
+      <section v-show="tab === 'stok'">
+        <ba-stock-table
+          :items="state.stok"
+          :upbjj-list="state.upbjjList"
+          :kategori-list="state.kategoriList"
+          @create="handleCreateStok"
+          @update="handleUpdateStok"
+          @delete="handleDeleteStok"></ba-stock-table>
+      </section>
+
+      <section v-show="tab === 'tracking'">
+        <do-tracking
+          :items="state.tracking"
+          :paket="state.paket"
+          :stok="state.stok"
+          @add-progress="handleAddProgress"></do-tracking>
+      </section>
+
+      <section v-show="tab === 'order'">
+        <order-form
+          :paket="state.paket"
+          :ekspedisi="state.pengirimanList"
+          :stok="state.stok"
+          :next-do-number="nextDoNumber"
+          @created="handleNewDO"></order-form>
+      </section>
+    </main>
+
+    <!-- Pesan singkat (toast) -->
+    <div class="toast" :class="'toast-' + toast.type" v-if="toast">{{ toast.text }}</div>
+
+    <!-- Pop-up konfirmasi/informasi; dipanggil lewat this.$refs.modal -->
+    <app-modal ref="modal"></app-modal>
+  </div>
+
+  <!--
+    Template komponen TIDAK ditulis di sini: setiap template berada di folder /templates
+    dan dipasang otomatis sebagai <template id="tpl-stock">, tpl-tracking, tpl-order,
+    tpl-badge, dan tpl-modal oleh Api.loadTemplates() (js/services/api.js).
+  -->
+
+  <!-- Scripts (urutan penting): Vue -> service -> komponen -> app -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js"></script>
+  <script src="js/services/api.js"></script>
+  <script src="js/components/stock-table.js"></script>
+  <script src="js/components/do-tracking.js"></script>
+  <script src="js/components/order-form.js"></script>
+  <script src="js/components/status-badge.js"></script>
+  <script src="js/components/app-modal.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

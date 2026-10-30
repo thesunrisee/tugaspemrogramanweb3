@@ -1,0 +1,82 @@
+<!-- Template <do-tracking> (id: tpl-tracking). Root: <div class="tracking-panel"> -->
+<div class="tracking-panel">
+
+  <!-- ===================== PENCARIAN ===================== -->
+  <section class="card">
+    <h2>Cari Delivery Order</h2>
+    <div class="search-row">
+      <!-- Enter = cari, Esc = hapus pencarian (event keyboard) -->
+      <input type="text"
+             class="search-input"
+             v-model="keyword"
+             placeholder="Masukkan Nomor DO atau NIM, lalu tekan Enter"
+             @keydown.enter="submitSearch"
+             @keydown.esc="clearSearch">
+      <button type="button" class="btn btn-primary" @click="submitSearch">Cari</button>
+      <button type="button" class="btn" @click="clearSearch">Reset</button>
+    </div>
+    <p class="hint">Tekan <kbd>Enter</kbd> untuk mencari dan <kbd>Esc</kbd> untuk menghapus pencarian.</p>
+  </section>
+
+  <!-- Keterangan jumlah hasil -->
+  <p class="muted result-info">
+    <span v-if="isSearching">{{ results.length }} hasil untuk &ldquo;{{ submittedKeyword }}&rdquo;</span>
+    <span v-else>Menampilkan semua Delivery Order ({{ results.length }})</span>
+  </p>
+
+  <!-- v-if / v-else: kartu hasil, atau pesan bila tidak ada yang cocok -->
+  <div v-if="results.length > 0">
+    <!-- Satu kartu untuk setiap DO -->
+    <article class="card do-card" v-for="item in results" :key="item.doNumber">
+      <header class="do-head">
+        <h3>{{ item.doNumber }}</h3>
+        <status-badge :status="item.status"></status-badge>
+      </header>
+
+      <!-- Data utama DO. Mustache {{ }} menampilkan teks; filter memformatnya. -->
+      <dl class="do-info">
+        <div><dt>NIM</dt><dd>{{ item.nim }}</dd></div>
+        <div><dt>Nama</dt><dd>{{ item.nama }}</dd></div>
+        <div>
+          <dt>Ekspedisi</dt>
+          <dd>{{ item.ekspedisi }}<span v-if="item.layanan"> &ndash; {{ item.layanan }}</span></dd>
+        </div>
+        <div><dt>Tanggal Kirim</dt><dd>{{ item.tanggalKirim | tanggal }}</dd></div>
+        <div><dt>Paket</dt><dd>{{ paketName(item.paket) }} <span class="muted">({{ item.paket }})</span></dd></div>
+        <div><dt>Total</dt><dd><strong>{{ item.total | rupiah }}</strong></dd></div>
+      </dl>
+
+      <!-- Isi paket (v-for pada array teks) -->
+      <div class="do-paket" v-if="paketIsi(item.paket).length > 0">
+        <span class="muted">Isi paket:</span>
+        <ul>
+          <li v-for="line in paketIsi(item.paket)" :key="line">{{ line }}</li>
+        </ul>
+      </div>
+
+      <!-- Riwayat perjalanan. v-for dengan index untuk mengetahui entri terakhir. -->
+      <h4>Riwayat Perjalanan</h4>
+      <ol class="timeline" v-if="item.perjalanan.length > 0">
+        <li v-for="(step, idx) in item.perjalanan" :key="idx" :class="{ latest: idx === item.perjalanan.length - 1 }">
+          <span class="time">{{ step.waktu | tanggalWaktu }}</span>
+          <span class="desc">{{ step.keterangan }}</span>
+          <span class="tag-latest" v-if="idx === item.perjalanan.length - 1">terbaru</span>
+        </li>
+      </ol>
+      <p class="muted" v-else>Belum ada riwayat perjalanan.</p>
+
+      <!-- Tambah progres. :value + @input = binding manual per DO; Enter menyimpan. -->
+      <div class="progress-add">
+        <input type="text"
+               :value="progressDraft[item.doNumber] || ''"
+               @input="setDraft(item.doNumber, $event.target.value)"
+               @keydown.enter="addProgress(item)"
+               placeholder="Tambah progres, mis. Tiba di gudang transit Jakarta"
+               :class="{ invalid: progressErrors[item.doNumber] }">
+        <button type="button" class="btn" @click="addProgress(item)">Tambah Progres</button>
+      </div>
+      <small class="error" v-if="progressErrors[item.doNumber]">{{ progressErrors[item.doNumber] }}</small>
+    </article>
+  </div>
+  <p class="empty card" v-else>Delivery Order tidak ditemukan. Periksa Nomor DO atau NIM, lalu coba lagi.</p>
+</div>

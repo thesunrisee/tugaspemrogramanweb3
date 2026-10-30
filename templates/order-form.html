@@ -1,0 +1,74 @@
+<!-- Template <order-form> (id: tpl-order). Root: <section class="card form-card"> -->
+<section class="card form-card" @keydown.enter="onFormEnter">
+  <h2>Pemesanan Bahan Ajar (Delivery Order Baru)</h2>
+
+  <div class="form-grid">
+    <!-- Nomor DO otomatis: readonly, nilainya dari prop -->
+    <label class="field">
+      <span>Nomor DO (otomatis)</span>
+      <input type="text" :value="nextDoNumber" readonly class="readonly">
+    </label>
+
+    <label class="field">
+      <span>NIM</span>
+      <input type="text" inputmode="numeric" v-model="form.nim" placeholder="123456789" :class="{ invalid: errors.nim }">
+      <small class="error" v-if="errors.nim">{{ errors.nim }}</small>
+    </label>
+
+    <label class="field">
+      <span>Nama</span>
+      <input type="text" v-model="form.nama" placeholder="Nama lengkap" :class="{ invalid: errors.nama }">
+      <small class="error" v-if="errors.nama">{{ errors.nama }}</small>
+    </label>
+
+    <label class="field">
+      <span>Ekspedisi</span>
+      <select v-model="form.ekspedisiKode" :class="{ invalid: errors.ekspedisiKode }">
+        <option value="" disabled>Pilih ekspedisi</option>
+        <option v-for="e in ekspedisi" :key="e.kode" :value="e.kode">JNE &ndash; {{ e.nama }}</option>
+      </select>
+      <small class="error" v-if="errors.ekspedisiKode">{{ errors.ekspedisiKode }}</small>
+    </label>
+
+    <!-- Pilih paket: opsi menampilkan kode paket + nama paket -->
+    <label class="field span-2">
+      <span>Paket Bahan Ajar</span>
+      <select v-model="form.paketKode" :class="{ invalid: errors.paketKode }">
+        <option value="" disabled>Pilih paket</option>
+        <option v-for="p in paket" :key="p.kode" :value="p.kode">{{ p.kode }} &ndash; {{ p.nama }}</option>
+      </select>
+      <small class="error" v-if="errors.paketKode">{{ errors.paketKode }}</small>
+    </label>
+
+    <label class="field">
+      <span>Tanggal Kirim</span>
+      <div class="inline-row">
+        <input type="date" v-model="form.tanggalKirim" :class="{ invalid: errors.tanggalKirim }">
+        <button type="button" class="btn" @click="setToday">Hari ini</button>
+      </div>
+      <!-- Pratinjau tanggal dalam format "25 Agustus 2025" lewat filter -->
+      <small class="hint" v-if="form.tanggalKirim">{{ form.tanggalKirim | tanggal }}</small>
+      <small class="error" v-if="errors.tanggalKirim">{{ errors.tanggalKirim }}</small>
+    </label>
+  </div>
+
+  <!-- Detail isi paket: muncul setelah paket dipilih (v-if) -->
+  <div class="paket-detail" v-if="selectedPaket">
+    <h4>Isi {{ selectedPaket.nama }}</h4>
+    <ul>
+      <li v-for="mk in isiPaket" :key="mk.kode"><strong>{{ mk.kode }}</strong> &ndash; {{ mk.judul }}</li>
+    </ul>
+  </div>
+
+  <!-- Total harga otomatis dari paket, diformat dengan filter rupiah -->
+  <div class="total-row">
+    <span>Total Harga</span>
+    <strong class="total">{{ totalHarga | rupiah }}</strong>
+  </div>
+
+  <div class="form-actions">
+    <span class="hint">Tekan <kbd>Enter</kbd> untuk menyimpan.</span>
+    <button type="button" class="btn" @click="resetForm">Kosongkan</button>
+    <button type="button" class="btn btn-primary" @click="submit">Buat Delivery Order</button>
+  </div>
+</section>
